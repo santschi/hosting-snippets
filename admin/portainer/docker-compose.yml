@@ -1,0 +1,28 @@
+version: "3.8"
+
+ networks:
+  admin-net:
+    driver: bridge
+    name: admin-net
+
+ services:
+    portainer:
+      image: portainer/portainer-ce:latest
+      container_name: portainer
+      ports:
+        - '9443:9443'
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.portainer.rule=Host(`portainer.domain.com`)"
+        - "traefik.http.routers.portainer.entrypoints=web-secure"
+        - "traefik.http.routers.portainer.tls=true"
+        - "traefik.http.routers.portainer.tls.certresolver=cloudflare-resolver"
+        - "traefik.http.routers.portainer.tls.domains[0].main=*.domain.com"
+        - "traefik.http.routers.portainer.service=portainerService"
+        - "traefik.http.services.portainerService.loadBalancer.server.port=9000"
+      networks:
+        - admin-net
+      volumes:
+        - /mnt/appdata/portainer:/data
+        - /var/run/docker.sock:/var/run/docker.sock
+      restart: unless-stopped
