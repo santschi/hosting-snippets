@@ -1,0 +1,74 @@
+version: '3.7'
+
+networks:
+  admin-net:
+    external: true
+    name: admin-net
+  auth-net:
+    driver: bridge
+    name: auth-net
+  media-net:
+    driver: bridge
+    name: media-net
+  office-net:
+    driver: bridge
+    name: office-net
+  dev-net:
+    driver: bridge
+    name: dev-net
+  public-net:
+    driver: bridge
+    name: public-net
+  appwrite-gateway:
+    driver: bridge
+    name: appwrite-gateway
+
+services:
+  traefik:
+    container_name: traefik
+    image: traefik:latest
+    networks:
+      - admin-net
+      - auth-net
+      - media-net
+      - office-net
+      - dev-net
+      - public-net
+      - appwrite-gateway
+    command:
+      - "--log.level=DEBUG"
+      #- "--api.dashboard=true"
+      #- "--api.insecure=true"
+      - "--metrics.prometheus=true"
+      - "--providers.file.directory=/config/"
+      - "--providers.file.watch=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      # http entrypoint
+      - "--entrypoints.web.address=:80"
+      # redirect http to https
+      - "--entrypoints.web.http.redirections.entryPoint.to=web-secure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entryPoint.priority=1000"
+      # https entrypoint
+      - "--entrypoints.web-secure.address=:443"
+      # get Let's encrypt certificate
+      - "--certificatesresolvers.cloudflare-resolver.acme.dnschallenge=true"
+      - "--certificatesresolvers.cloudflare-resolver.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.cloudflare-resolver.acme.dnschallenge.delaybeforecheck=10"
+      #- "--certificatesresolvers.cloudflare-resolver.acme.dnschallenge.resolvers=1.1.1.1:53"
+      # Debug Let's Encrypt server
+      #- "--certificatesresolvers.cloudflare-resolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.cloudflare-resolver.acme.email=CHANGEME
+      - "--certificatesresolvers.cloudflare-resolver.acme.storage=acme.json"
+    env_file:
+      # import env file from portainer
+      - stack.env
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /mnt/appdata/traefik/acme.json:/acme.json
+      - /mnt/appdata/traefik/config/:/config
+    restart: always
